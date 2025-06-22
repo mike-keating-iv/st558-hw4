@@ -5,6 +5,10 @@ format: pdf
 editor: visual
 ---
 
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+```
+
 ## Task 1: Conceptual Questions
 
 ### Q1: What is the purpose of the lapply() function? What is the equivalent purrr function?
@@ -35,7 +39,7 @@ The purr functions (map) have options like map_dbl() and map_int() can help us e
 
 ### Q4: What is a side-effect function?
 
-A side-effect function is a function that performs an action outside of it's normal scope. In other words, something else happens in addition to returning a value.
+A side-effect function is a function that performs an action without necessarily returning a value. In other words, something else happens instead of returning a value.
 
 ### Q5: Why can you name a variable sd in a function and and not cause any issues with the sd function?
 
@@ -99,7 +103,8 @@ getRMSE(resp, pred)
 Repeat after replacing two of the response values with missing values.
 
 ```{r}
-# To make things simple let's just replace the first two values in the response values with NA
+# To make things simple let's just replace the first two values in 
+# the response values with NA
 resp_NA <- replace(resp, 1:2, NA_real_)
 
 
@@ -157,7 +162,8 @@ getMAE(resp,pred)
 Repeat after replacing two of the response values with missing values.
 
 ```{r}
-# To make things simple let's just replace the first two values in the response values with NA
+# To make things simple let's just replace the first two values in
+# the response values with NA
 resp_NA <- replace(resp, 1:2, NA_real_)
 
 
@@ -172,6 +178,7 @@ getMAE(resp_NA, pred, na.rm = TRUE)
 ### Q5: Wrapper for Both Metrics
 
 ```{r}
+
 getMetrics <- function(resp, pred, metrics = c("rmse", "mae"), ...){
   if (!is.numeric(resp) | !is.numeric(pred)){
     stop("ERROR: Responses or predictions not a numeric vector")
@@ -228,4 +235,83 @@ getMetrics(resp_NA, pred, c("rmse", "mae"))
 ```{r}
 # Recall we already replaced with NA in our resp_NA object
 getMetrics(resp_NA, pred, c("rmse", "mae"), na.rm = TRUE)
+```
+
+## Task 3
+
+### Q1: Use GET() from the httr package to return information about a topic that you are interested in that has been in the news lately (store the result as an R object). Note: We can only look 30 days into the past with a free account.
+
+```{r, message=FALSE}
+library(jsonlite)
+library(httr)
+```
+
+```{r}
+
+api_key ="0ccf25ee550542dcb67870ea981d4e3f"
+subject <- "magic the gathering"
+# We need to replace spaces with &, as well as add and extra one at the end
+subject <- paste0(str_replace_all(subject, " ", "&"),"&")
+
+url <- paste0("https://newsapi.org/v2/everything?q=", subject,
+              "apiKey=", api_key)
+response <- GET(url = url)
+
+
+```
+
+### Q2: Parse What is Returned
+
+```{r}
+# We were given a hint that the data is in the contents field, so we will parse that
+parsed_response <- fromJSON((rawToChar(response$content)))
+str(parsed_response)
+```
+
+Looks like our article info is stored in the articles df:
+
+```{r}
+
+articles <-as_tibble(parsed_response$articles)
+str(articles)
+```
+
+### Q3: Quick API Function
+
+Write a function to allow the user to easily query API.
+
+```{r}
+
+searchNews <- function(subject, from_date = Sys.Date(), api_key){
+  # API only goes back 30 days, so let's check and adjust
+  todays_date <- Sys.Date()
+  thirty_days_ago <- todays_date - 30
+  if (from_date < thirty_days_ago){
+    print("from_date is too far in the past, searching instead from 30 days ago")
+    from_date <- thirty_days_ago
+  }
+  
+  # Clean up subject and from_date
+  subject <- paste0(str_replace_all(subject, " ", "&"),"&")
+  from_date <- paste0(from_date, "&")
+  # Build url
+  url <- paste0("https://newsapi.org/v2/everything?q=", subject,
+                "from=", from_date,
+                "apiKey=", api_key)
+  
+  # Query api for response
+  response <- GET(url = url)
+  
+  parsed_response <- fromJSON((rawToChar(response$content)))
+  articles <-as_tibble(parsed_response$articles)
+  
+  
+  return(articles)
+}
+
+```
+
+```{r}
+searchNews("gamestop", "2025-05-19", api_key)
+
 ```
