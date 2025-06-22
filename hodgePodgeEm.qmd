@@ -5,7 +5,7 @@ format: pdf
 editor: visual
 ---
 
-## Task 1
+## Task 1: Conceptual Questions
 
 ### Q1: What is the purpose of the lapply() function? What is the equivalent purrr function?
 
@@ -40,3 +40,192 @@ A side-effect function is a function that performs an action outside of it's nor
 ### Q5: Why can you name a variable sd in a function and and not cause any issues with the sd function?
 
 The variables created within the function are local/accessible only to the function. They are not initialized in the greater environment, so they do not conflict with the sd function.
+
+## Task  2: Writing R Functions
+
+### Q1: getRMSE
+
+Write a basic function (call it getRMSE()) that takes in a vector of responses and a vector of predictions and outputs the RMSE.
+
+```{r}
+getRMSE <- function(resp, pred, ...){
+  args <- list(...)
+  # Show a warning if NA is present
+  if (anyNA(resp)) {
+    if ("na.rm" %in% names(args)){
+      if (isFALSE(args$na.rm)){
+        warning("NA found in response vector. Consider setting na.rm = TRUE")
+        }
+      } else {
+        warning("NA found in response vector. Consider setting na.rm = TRUE")
+        }  
+  }
+  
+  # Get squared errors
+  squared_errors <- (resp - pred)^2
+  
+  # Get mean squared errors, mse
+  mse <- mean(squared_errors, ...)
+  
+  # Finally, get rmse
+  rmse <- sqrt(mse)
+  
+  return(rmse)
+  
+  
+}
+```
+
+### Q2: Test getRMSE
+
+Create response values and predictions
+
+```{r}
+set.seed(10)
+n <- 100
+x <- runif(n)
+resp <- 3 + 10*x + rnorm(n)
+pred <- predict(lm(resp ~ x), data.frame(x))
+
+```
+
+Test RMSE function
+
+```{r}
+getRMSE(resp, pred)
+
+```
+
+Repeat after replacing two of the response values with missing values.
+
+```{r}
+# To make things simple let's just replace the first two values in the response values with NA
+resp_NA <- replace(resp, 1:2, NA_real_)
+
+
+# Calling without remove na arument
+getRMSE(resp_NA, pred)
+```
+
+```{r}
+# Calling with our optional argument
+getRMSE(resp_NA, pred, na.rm = TRUE)
+```
+
+### Q3: getMAE()
+
+```{r}
+getMAE <- function(resp, pred, ...){
+   args <- list(...)
+  # Show a warning if NA is present
+  if (anyNA(resp)) {
+    if ("na.rm" %in% names(args)){
+      if (isFALSE(args$na.rm)){
+        warning("NA found in response vector. Consider setting na.rm = TRUE")
+        }
+      } else {
+        warning("NA found in response vector. Consider setting na.rm = TRUE")
+        }  
+  }
+  # Get absolute error
+   ae <- abs(resp - pred)
+   mae <- mean(ae, ...)
+   
+   return(mae)
+  
+}
+```
+
+### Q4:  Test getMAE()
+
+Create response values and predictions
+
+```{r}
+set.seed(10)
+n <- 100
+x <- runif(n)
+resp <- 3 + 10*x + rnorm(n)
+pred <- predict(lm(resp ~ x), data.frame(x))
+```
+
+Test MAE function:
+
+```{r}
+getMAE(resp,pred)
+```
+
+Repeat after replacing two of the response values with missing values.
+
+```{r}
+# To make things simple let's just replace the first two values in the response values with NA
+resp_NA <- replace(resp, 1:2, NA_real_)
+
+
+# Calling without remove na arument
+getMAE(resp_NA, pred)
+```
+
+```{r}
+getMAE(resp_NA, pred, na.rm = TRUE)
+```
+
+### Q5: Wrapper for Both Metrics
+
+```{r}
+getMetrics <- function(resp, pred, metrics = c("rmse", "mae"), ...){
+  if (!is.numeric(resp) | !is.numeric(pred)){
+    stop("ERROR: Responses or predictions not a numeric vector")
+  }
+  
+  results = list()
+  
+  
+  
+  if ("rmse" %in% metrics){
+    results$rmse <- getRMSE(resp, pred, ...)
+    
+  }
+  if ("mae" %in% metrics){
+    results$mae <- getMAE(resp, pred, ...)
+  }
+  
+  if (length(results) == 0){
+    stop("ERROR: Unknown metrics supplied")
+  }
+  
+  return(results)
+  
+}
+```
+
+### Q6: Test New Metric Function
+
+Call function for RMSE:
+
+```{r}
+getMetrics(resp, pred, c("rmse"))
+```
+
+Call function for MAE:
+
+```{r}
+getMetrics(resp, pred, c("mae"))
+```
+
+Calling function for both metrics:
+
+```{r}
+getMetrics(resp, pred, c("rmse","mae"))
+```
+
+Repeat with NA values:
+
+```{r}
+# Recall we already replaced with NA in our resp_NA object
+getMetrics(resp_NA, pred, c("rmse", "mae"))
+```
+
+```{r}
+# Recall we already replaced with NA in our resp_NA object
+getMetrics(resp_NA, pred, c("rmse", "mae"), na.rm = TRUE)
+```
